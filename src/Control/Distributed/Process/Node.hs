@@ -172,6 +172,7 @@ import Control.Distributed.Process.Internal.Types
   , ProcessInfo(..)
   , ProcessInfoNone(..)
   , NodeStats(..)
+  , NodeInfo(..)
   , SendPortId(..)
   , typedChannelWithId
   , RegisterReply(..)
@@ -677,6 +678,10 @@ data NCState = NCState
   , _registeredHere :: !(Map String ProcessId)
   , _registeredOnNodes :: !(Map ProcessId [(NodeId,Int)])
   }
+instance Show NCState
+instance (Show a, Show b, Show c) => Show (BiMultiMap a b c)
+instance Show LocalNode
+instance Show ValidLocalNodeState
 
 newtype NC a = NC { unNC :: StateT NCState (ReaderT LocalNode IO) a }
   deriving ( Applicative
@@ -815,6 +820,8 @@ nodeController = do
             `Exception.finally` throwIO (NodeClosedException $ localNodeId node)
       NCMsg (ProcessIdentifier from) (GetNodeStats nid) ->
         ncEffectGetNodeStats from nid
+      NCMsg (ProcessIdentifier from) (GetNodeInfo nid) ->
+        ncEffectGetNodeInfo from nid
       unexpected ->
         error $ "nodeController: unexpected message " ++ show unexpected
 
@@ -1134,6 +1141,14 @@ ncEffectGetNodeStats from _nid = do
           }
   postAsMessage from stats
 
+ncEffectGetNodeInfo :: ProcessId -> NodeId -> NC ()
+ncEffectGetNodeInfo from _nid = do
+  node <- ask
+  ncState <- StateT.get
+  nodeState <- liftIO $ withValidLocalState node return
+  let replyString = show (node, ncState, nodeState)
+  postAsMessage from $ NodeInfo replyString
+
 --------------------------------------------------------------------------------
 -- Auxiliary                                                                  --
 --------------------------------------------------------------------------------
@@ -1184,6 +1199,7 @@ destNid (Kill pid _)          = Just $ processNodeId pid
 destNid (Exit pid _)          = Just $ processNodeId pid
 destNid (GetInfo pid)         = Just $ processNodeId pid
 destNid (GetNodeStats nid)    = Just nid
+destNid (GetNodeInfo nid)     = Just nid
 destNid (LocalSend pid _)     = Just $ processNodeId pid
 destNid (LocalPortSend cid _) = Just $ processNodeId (sendPortProcessId cid)
 destNid (SigShutdown)       = Nothing

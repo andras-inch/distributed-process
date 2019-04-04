@@ -69,8 +69,10 @@ module Control.Distributed.Process.Internal.Primitives
   , ProcessInfo(..)
   , getProcessInfo
   , NodeStats(..)
+  , NodeInfo(..)
   , getNodeStats
   , getLocalNodeStats
+  , getLocalNodeInfo
     -- * Monitoring and linking
   , link
   , unlink
@@ -210,6 +212,7 @@ import Control.Distributed.Process.Internal.Types
   , ProcessInfo(..)
   , ProcessInfoNone(..)
   , NodeStats(..)
+  , NodeInfo(..)
   , isEncoded
   , createMessage
   , createUnencodedMessage
@@ -826,6 +829,14 @@ getLocalNodeStats = do
   self <- getSelfNode
   sendCtrlMsg Nothing $ GetNodeStats self
   receiveWait [ match (\(stats :: NodeStats) -> return stats) ]
+
+-- | Dump local node and controller's state
+getLocalNodeInfo :: Process String
+getLocalNodeInfo = do
+  self <- getSelfNode
+  sendCtrlMsg Nothing $ GetNodeInfo self
+  NodeInfo s <- receiveWait [ match (\(info :: NodeInfo) -> return info) ]
+  return s
 
 -- | Get information about the specified process
 getProcessInfo :: ProcessId -> Process (Maybe ProcessInfo)
