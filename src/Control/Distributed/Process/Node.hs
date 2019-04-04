@@ -172,6 +172,7 @@ import Control.Distributed.Process.Internal.Types
   , ProcessInfo(..)
   , ProcessInfoNone(..)
   , NodeStats(..)
+  , Registry(..)
   , SendPortId(..)
   , typedChannelWithId
   , RegisterReply(..)
@@ -815,6 +816,8 @@ nodeController = do
             `Exception.finally` throwIO (NodeClosedException $ localNodeId node)
       NCMsg (ProcessIdentifier from) (GetNodeStats nid) ->
         ncEffectGetNodeStats from nid
+      NCMsg (ProcessIdentifier from) (GetRegistry nid) ->
+        ncEffectGetRegistry from nid
       unexpected ->
         error $ "nodeController: unexpected message " ++ show unexpected
 
@@ -1134,6 +1137,12 @@ ncEffectGetNodeStats from _nid = do
           }
   postAsMessage from stats
 
+ncEffectGetRegistry :: ProcessId -> NodeId -> NC ()
+ncEffectGetRegistry from _nid = do
+  ncState <- StateT.get
+  let registeredReply = Registry $ ncState ^. registeredHere
+  postAsMessage from registeredReply
+
 --------------------------------------------------------------------------------
 -- Auxiliary                                                                  --
 --------------------------------------------------------------------------------
@@ -1184,6 +1193,7 @@ destNid (Kill pid _)          = Just $ processNodeId pid
 destNid (Exit pid _)          = Just $ processNodeId pid
 destNid (GetInfo pid)         = Just $ processNodeId pid
 destNid (GetNodeStats nid)    = Just nid
+destNid (GetRegistry nid)     = Just nid
 destNid (LocalSend pid _)     = Just $ processNodeId pid
 destNid (LocalPortSend cid _) = Just $ processNodeId (sendPortProcessId cid)
 destNid (SigShutdown)       = Nothing

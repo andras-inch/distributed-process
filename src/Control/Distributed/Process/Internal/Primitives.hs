@@ -69,8 +69,10 @@ module Control.Distributed.Process.Internal.Primitives
   , ProcessInfo(..)
   , getProcessInfo
   , NodeStats(..)
+  , Registry(..)
   , getNodeStats
   , getLocalNodeStats
+  , getLocalRegistry
     -- * Monitoring and linking
   , link
   , unlink
@@ -132,6 +134,7 @@ import Data.Binary (Binary(..), Put, Get, decode)
 import Data.Time.Clock (getCurrentTime, UTCTime(..))
 import Data.Time.Calendar (Day(..))
 import Data.Time.Format (formatTime)
+import Data.Map (Map)
 #if MIN_VERSION_time(1,5,0)
 import Data.Time.Format (defaultTimeLocale)
 #else
@@ -210,6 +213,7 @@ import Control.Distributed.Process.Internal.Types
   , ProcessInfo(..)
   , ProcessInfoNone(..)
   , NodeStats(..)
+  , Registry(..)
   , isEncoded
   , createMessage
   , createUnencodedMessage
@@ -826,6 +830,14 @@ getLocalNodeStats = do
   self <- getSelfNode
   sendCtrlMsg Nothing $ GetNodeStats self
   receiveWait [ match (\(stats :: NodeStats) -> return stats) ]
+
+-- | Dump the local registry
+getLocalRegistry :: Process (Map String ProcessId)
+getLocalRegistry = do
+  self <- getSelfNode
+  sendCtrlMsg Nothing $ GetRegistry self
+  Registry r <- receiveWait [ match (\(r :: Registry) -> return r) ]
+  return r
 
 -- | Get information about the specified process
 getProcessInfo :: ProcessId -> Process (Maybe ProcessInfo)

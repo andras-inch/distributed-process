@@ -73,6 +73,7 @@ module Control.Distributed.Process.Internal.Types
   , ProcessInfo(..)
   , ProcessInfoNone(..)
   , NodeStats(..)
+  , Registry(..)
     -- * Node controller internal data types
   , NCMsg(..)
   , ProcessSignal(..)
@@ -660,6 +661,10 @@ data NodeStats = NodeStats {
    }
    deriving (Show, Eq, Typeable)
 
+-- newtype ?
+data Registry = Registry (Map String ProcessId)
+   deriving (Show, Eq, Typeable)
+
 -- | Provide information about a running process
 data ProcessInfo = ProcessInfo {
     infoNode               :: NodeId
@@ -702,6 +707,7 @@ data ProcessSignal =
   | GetInfo !ProcessId
   | SigShutdown
   | GetNodeStats !NodeId
+  | GetRegistry !NodeId
   deriving Show
 
 --------------------------------------------------------------------------------
@@ -754,6 +760,7 @@ instance Binary ProcessSignal where
   put (GetInfo about)         = putWord8 30 >> put about
   put (SigShutdown)         = putWord8 31
   put (GetNodeStats nid)         = putWord8 32 >> put nid
+  put (GetRegistry nid)          = putWord8 65 >> put nid
   get = do
     header <- getWord8
     case header of
@@ -774,6 +781,7 @@ instance Binary ProcessSignal where
       30 -> GetInfo <$> get
       31 -> return SigShutdown
       32 -> GetNodeStats <$> get
+      65 -> GetRegistry <$> get
       _ -> fail "ProcessSignal.get: invalid"
 
 instance Binary DiedReason where
@@ -835,6 +843,10 @@ instance Binary NodeStats where
              >> put (nodeStatsMonitors nStats)
              >> put (nodeStatsLinks nStats)
              >> put (nodeStatsProcesses nStats)
+
+instance Binary Registry where
+  get = Registry <$> get
+  put (Registry m) = put m
 
 instance Binary ProcessInfoNone where
   get = ProcessInfoNone <$> get
