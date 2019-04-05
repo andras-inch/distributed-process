@@ -115,6 +115,16 @@ Library
      Exposed-modules: Control.Distributed.Process.Internal.Closure.TH
      CPP-Options:     -DTemplateHaskellSupport
 
+executable dtest
+  main-is: Main.hs
+  hs-source-dirs:
+    app
+  ghc-options: -threaded -Wall -Werror
+  build-depends:     base >= 4.6 && < 5,
+                     network-transport >= 0.4.1.0 && < 0.6,
+                     network-transport-tcp >= 0.3 && < 0.7,
+                     distributed-process
+
 -- Tests are in distributed-process-test package, for convenience.
 
 benchmark distributed-process-throughput
