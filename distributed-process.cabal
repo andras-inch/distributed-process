@@ -121,6 +121,7 @@ executable dtest
     app
   ghc-options: -threaded -Wall -Werror
   build-depends:     base >= 4.6 && < 5,
+                     containers,
                      network-transport >= 0.4.1.0 && < 0.6,
                      network-transport-tcp >= 0.3 && < 0.7,
                      distributed-process
