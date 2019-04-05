@@ -17,10 +17,12 @@ module Control.Distributed.Process.Serializable
 
 import Data.Binary (Binary)
 
-import Data.Typeable (Typeable, typeRepFingerprint, typeOf)
+import Data.Typeable
+--import Data.Typeable.Internal (TyCon, tyConName, tyConPackage, tyConModule, splitTyConApp)
 
 import Numeric (showHex)
 import Control.Exception (throw)
+import GHC.Fingerprint (fingerprintString)
 import GHC.Fingerprint.Type (Fingerprint(..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -28,6 +30,7 @@ import qualified Data.ByteString.Internal as BSI ( unsafeCreate, toForeignPtr )
 import Foreign.Storable (pokeByteOff, peekByteOff, sizeOf)
 import Foreign.ForeignPtr (withForeignPtr)
 import System.IO.Unsafe (unsafePerformIO)
+
 
 -- | Reification of 'Serializable' (see "Control.Distributed.Process.Closure")
 data SerializableDict a where
@@ -65,7 +68,31 @@ sizeOfFingerprint = sizeOf (undefined :: Fingerprint)
 
 -- | The fingerprint of the typeRep of the argument
 fingerprint :: Typeable a => a -> Fingerprint
-fingerprint = typeRepFingerprint . typeOf
+fingerprint = fingerprintString . typeName
+  where
+    buildCon :: TyCon -> String
+    buildCon con =
+      qual ++ tyConName con
+      where
+        pkg  = tyConPackage con
+        modu = tyConModule con
+
+        qual | pkg `elem` ignore_pkg = ""
+             | otherwise             = modu ++ "."
+
+        ignore_pkg =
+          [ "base" , "ghc-prim", "integer-gmp", "containers" ]
+
+    buildApps :: (String -> String) -> (TyCon, [TypeRep]) -> String
+    buildApps _ (con, []) = buildCon con
+    buildApps b (con, xs) =
+      b (unwords (buildCon con : map (buildApps brack . splitTyConApp) xs))
+      where
+        brack = ('(' :) . (++ ")")
+
+    typeName :: Typeable a => a -> String
+    typeName =
+      buildApps id . splitTyConApp . typeOf
 
 -- | Show fingerprint (for debugging purposes)
 showFingerprint :: Fingerprint -> ShowS
